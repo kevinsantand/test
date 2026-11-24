@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>Carburant autour de moi</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f8fafc; --card:#fff; --fg:#0f172a; --mut:#64748b; --acc:#16a34a; --bd:#e2e8f0; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f172a; --card:#1e293b; --fg:#f1f5f9; --mut:#94a3b8; --bd:#334155; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.4 system-ui,sans-serif; background:var(--bg); color:var(--fg);
+         padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom)); }
+  h1 { font-size:20px; margin:4px 0 12px; }
+  .row { display:flex; gap:8px; margin-bottom:10px; }
+  select, button { font:inherit; padding:10px; border-radius:10px; border:1px solid var(--bd); background:var(--card); color:var(--fg); }
+  select { flex:1; }
+  button { background:var(--acc); color:#fff; border:0; font-weight:600; }
+  #status { color:var(--mut); font-size:14px; margin:6px 0 10px; }
+  .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:12px; margin-bottom:8px;
+          display:flex; justify-content:space-between; gap:12px; align-items:center; text-decoration:none; color:inherit; }
+  .card.best { border-color:var(--acc); }
+  .price { font-size:22px; font-weight:700; white-space:nowrap; }
+  .sub { color:var(--mut); font-size:13px; }
+  .addr { font-weight:600; }
+</style>
+</head>
+<body>
+<h1>⛽ Carburant autour de moi</h1>
+<div class="row">
+  <select id="fuel">
+    <option value="gazole">Gazole</option>
+    <option value="sp95">SP95</option>
+    <option value="e10">SP95-E10</option>
+    <option value="sp98">SP98</option>
+    <option value="e85">E85</option>
+    <option value="gplc">GPLc</option>
+  </select>
+  <select id="radius">
+    <option value="3">3 km</option>
+    <option value="5" selected>5 km</option>
+    <option value="10">10 km</option>
+    <option value="20">20 km</option>
+  </select>
+</div>
+<div class="row"><button id="go" style="flex:1">Actualiser</button></div>
+<div id="status"></div>
+<div id="list"></div>
+
+<script>
+const API = "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records";
+const $ = id => document.getElementById(id);
+const FALLBACK = { lat: 43.6108, lon: 3.8767 }; // Montpellier centre
+
+try { const f = localStorage.getItem("fuel"); if (f) $("fuel").value = f; } catch {}
+
+function getPos() {
+  return new Promise(res => {
+    if (!navigator.geolocation) return res({ ...FALLBACK, fallback: true });
+    navigator.geolocation.getCurrentPosition(
+      p => res({ lat: p.coords.latitude, lon: p.coords.longitude }),
+      () => res({ ...FALLBACK, fallback: true }),
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+    );
+  });
+}
+
+function ago(iso) {
+  if (!iso) return "date inconnue";
+  const h = (Date.now() - new Date(iso)) / 36e5;
+  if (h < 1) return "il y a " + Math.max(1, Math.round(h * 60)) + " min";
+  if (h < 48) return "il y a " + Math.round(h) + " h";
+  return "il y a " + Math.round(h / 24) + " j";
+}
+
+function km(a, b, c, d) {
+  const r = x => x * Math.PI / 180, R = 6371;
+  const h = Math.sin(r(c - a) / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(r(d - b) / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+async function load() {
+  const fuel = $("fuel").value, radius = $("radius").value;
+  try { localStorage.setItem("fuel", fuel); } catch {}
+  $("status").textContent = "Localisation…";
+  $("list").innerHTML = "";
+  const pos = await getPos();
+  $("status").textContent = pos.fallback ? "Position indisponible → Montpellier centre. Recherche…" : "Recherche…";
+
+  const where = `within_distance(geom, geom'POINT(${pos.lon} ${pos.lat})', ${radius}km) AND ${fuel}_prix IS NOT NULL`;
+  const qs = new URLSearchParams({
+    where, order_by: fuel + "_prix", limit: "15",
+    select: `adresse,ville,cp,geom,${fuel}_prix,${fuel}_maj`
+  });
+  try {
+    const r = await fetch(API + "?" + qs);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const data = await r.json();
+    const rows = data.results || [];
+    if (!rows.length) { $("status").textContent = "Aucune station trouvée dans ce rayon."; return; }
+    $("status").textContent = rows.length + " stations, du moins cher au plus cher" + (pos.fallback ? " (autour de Montpellier centre)" : "");
+    $("list").innerHTML = rows.map((s, i) => {
+      const g = s.geom || {};
+      const lat = g.lat, lon = g.lon;
+      const d = lat != null ? km(pos.lat, pos.lon, lat, lon).toFixed(1) + " km · " : "";
+      const link = lat != null ? `https://maps.apple.com/?daddr=${lat},${lon}` : "#";
+      const price = Number(s[fuel + "_prix"]).toFixed(3).replace(".", ",");
+      return `<a class="card ${i === 0 ? "best" : ""}" href="${link}" target="_blank" rel="noopener">
+        <div><div class="addr">${s.adresse || ""}</div>
+        <div class="sub">${s.cp || ""} ${s.ville || ""}</div>
+        <div class="sub">${d}maj ${ago(s[fuel + "_maj"])}</div></div>
+        <div class="price">${price} €</div></a>`;
+    }).join("");
+  } catch (e) {
+    $("status").textContent = "Erreur : " + e.message;
+  }
+}
+
+$("go").onclick = load;
+$("fuel").onchange = load;
+$("radius").onchange = load;
+load();
+</script>
+</body>
+</html>
