@@ -4,55 +4,106 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0f172a">
-<title>Carburant autour de moi</title>
+<title>Énergie autour de moi</title>
 <style>
-  :root { color-scheme: light dark; --bg:#f8fafc; --card:#fff; --fg:#0f172a; --mut:#64748b; --acc:#16a34a; --bd:#e2e8f0; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#0f172a; --card:#1e293b; --fg:#f1f5f9; --mut:#94a3b8; --bd:#334155; } }
+  :root { color-scheme: light dark; --bg:#f8fafc; --card:#fff; --fg:#0f172a; --mut:#64748b; --acc:#16a34a; --bd:#e2e8f0; --warn:#b45309; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f172a; --card:#1e293b; --fg:#f1f5f9; --mut:#94a3b8; --bd:#334155; --warn:#fbbf24; } }
   * { box-sizing: border-box; }
   body { margin:0; font:16px/1.4 system-ui,sans-serif; background:var(--bg); color:var(--fg);
          padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom)); }
   h1 { font-size:20px; margin:4px 0 12px; }
+  .tabs { display:flex; gap:6px; margin-bottom:12px; }
+  .tab { flex:1; padding:10px; border-radius:10px; border:1px solid var(--bd); background:var(--card); color:var(--fg); font-weight:600; }
+  .tab.on { background:var(--acc); color:#fff; border-color:var(--acc); }
   .row { display:flex; gap:8px; margin-bottom:10px; }
-  select, button { font:inherit; padding:10px; border-radius:10px; border:1px solid var(--bd); background:var(--card); color:var(--fg); }
-  select { flex:1; }
-  button { background:var(--acc); color:#fff; border:0; font-weight:600; }
+  select, button.go { font:inherit; padding:10px; border-radius:10px; border:1px solid var(--bd); background:var(--card); color:var(--fg); }
+  select { flex:1; min-width:0; }
+  button.go { background:var(--acc); color:#fff; border:0; font-weight:600; flex:1; }
   #status { color:var(--mut); font-size:14px; margin:6px 0 10px; }
+  .note { color:var(--warn); font-size:13px; margin:0 0 10px; }
   .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:12px; margin-bottom:8px;
           display:flex; justify-content:space-between; gap:12px; align-items:center; text-decoration:none; color:inherit; }
   .card.best { border-color:var(--acc); }
-  .price { font-size:22px; font-weight:700; white-space:nowrap; }
+  .price { font-size:22px; font-weight:700; white-space:nowrap; text-align:right; }
+  .price small { display:block; font-size:12px; font-weight:400; color:var(--mut); }
   .sub { color:var(--mut); font-size:13px; }
   .addr { font-weight:600; }
+  .hidden { display:none; }
 </style>
 </head>
 <body>
-<h1>⛽ Carburant autour de moi</h1>
-<div class="row">
-  <select id="fuel">
-    <option value="gazole">Gazole</option>
-    <option value="sp95">SP95</option>
-    <option value="e10">SP95-E10</option>
-    <option value="sp98">SP98</option>
-    <option value="e85">E85</option>
-    <option value="gplc">GPLc</option>
-  </select>
-  <select id="radius">
-    <option value="3">3 km</option>
-    <option value="5" selected>5 km</option>
-    <option value="10">10 km</option>
-    <option value="20">20 km</option>
-  </select>
+<h1>⚡ Énergie autour de moi</h1>
+<div class="tabs">
+  <button class="tab on" id="tab-fuel">⛽ Carburant</button>
+  <button class="tab" id="tab-ev">🔌 Électrique</button>
 </div>
-<div class="row"><button id="go" style="flex:1">Actualiser</button></div>
+
+<section id="p-fuel">
+  <div class="row">
+    <select id="fuel">
+      <option value="gazole">Gazole</option>
+      <option value="sp95">SP95</option>
+      <option value="e10">SP95-E10</option>
+      <option value="sp98">SP98</option>
+      <option value="e85">E85</option>
+      <option value="gplc">GPLc</option>
+    </select>
+    <select id="radius">
+      <option value="3">3 km</option>
+      <option value="5" selected>5 km</option>
+      <option value="10">10 km</option>
+      <option value="20">20 km</option>
+    </select>
+  </div>
+  <div class="row"><button class="go" id="go-fuel">Actualiser</button></div>
+</section>
+
+<section id="p-ev" class="hidden">
+  <div class="row">
+    <select id="ev-plug">
+      <option value="">Toutes prises</option>
+      <option value="prise_type_2">Type 2</option>
+      <option value="prise_type_combo_ccs">CCS (rapide)</option>
+      <option value="prise_type_chademo">CHAdeMO</option>
+    </select>
+    <select id="ev-power">
+      <option value="0">Toute puissance</option>
+      <option value="22">≥ 22 kW</option>
+      <option value="50">≥ 50 kW</option>
+      <option value="150">≥ 150 kW</option>
+    </select>
+  </div>
+  <div class="row">
+    <select id="ev-radius">
+      <option value="3">3 km</option>
+      <option value="5" selected>5 km</option>
+      <option value="10">10 km</option>
+      <option value="20">20 km</option>
+    </select>
+    <select id="ev-sort">
+      <option value="price">Tri : prix</option>
+      <option value="dist">Tri : distance</option>
+      <option value="power">Tri : puissance</option>
+    </select>
+  </div>
+  <div class="row"><button class="go" id="go-ev">Actualiser</button></div>
+  <p class="note">Le tarif est du texte libre saisi par chaque opérateur : il peut être absent ou approximatif. Vérifie dans l'appli de l'opérateur avant de te déplacer.</p>
+</section>
+
 <div id="status"></div>
 <div id="list"></div>
 
 <script>
-const API = "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records";
 const $ = id => document.getElementById(id);
 const FALLBACK = { lat: 43.6108, lon: 3.8767 }; // Montpellier centre
+const FUEL_API = "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records";
+const EV_API = "https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/bornes-irve/records";
 
-try { const f = localStorage.getItem("fuel"); if (f) $("fuel").value = f; } catch {}
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const store = {
+  get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} }
+};
 
 function getPos() {
   return new Promise(res => {
@@ -64,7 +115,6 @@ function getPos() {
     );
   });
 }
-
 function ago(iso) {
   if (!iso) return "date inconnue";
   const h = (Date.now() - new Date(iso)) / 36e5;
@@ -72,54 +122,168 @@ function ago(iso) {
   if (h < 48) return "il y a " + Math.round(h) + " h";
   return "il y a " + Math.round(h / 24) + " j";
 }
-
 function km(a, b, c, d) {
   const r = x => x * Math.PI / 180, R = 6371;
   const h = Math.sin(r(c - a) / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(r(d - b) / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h));
 }
+const route = (lat, lon) => `https://maps.apple.com/?daddr=${lat},${lon}`;
 
-async function load() {
+/* ---------- Onglets ---------- */
+let tab = store.get("tab", "fuel");
+function setTab(t) {
+  tab = t; store.set("tab", t);
+  $("tab-fuel").classList.toggle("on", t === "fuel");
+  $("tab-ev").classList.toggle("on", t === "ev");
+  $("p-fuel").classList.toggle("hidden", t !== "fuel");
+  $("p-ev").classList.toggle("hidden", t !== "ev");
+  (t === "fuel" ? loadFuel : loadEv)();
+}
+$("tab-fuel").onclick = () => setTab("fuel");
+$("tab-ev").onclick = () => setTab("ev");
+
+/* ---------- Carburant ---------- */
+$("fuel").value = store.get("fuel", "gazole");
+async function loadFuel() {
   const fuel = $("fuel").value, radius = $("radius").value;
-  try { localStorage.setItem("fuel", fuel); } catch {}
+  store.set("fuel", fuel);
   $("status").textContent = "Localisation…";
   $("list").innerHTML = "";
   const pos = await getPos();
   $("status").textContent = pos.fallback ? "Position indisponible → Montpellier centre. Recherche…" : "Recherche…";
-
   const where = `within_distance(geom, geom'POINT(${pos.lon} ${pos.lat})', ${radius}km) AND ${fuel}_prix IS NOT NULL`;
   const qs = new URLSearchParams({
     where, order_by: fuel + "_prix", limit: "15",
     select: `adresse,ville,cp,geom,${fuel}_prix,${fuel}_maj`
   });
   try {
-    const r = await fetch(API + "?" + qs);
+    const r = await fetch(FUEL_API + "?" + qs);
     if (!r.ok) throw new Error("HTTP " + r.status);
-    const data = await r.json();
-    const rows = data.results || [];
+    const rows = (await r.json()).results || [];
     if (!rows.length) { $("status").textContent = "Aucune station trouvée dans ce rayon."; return; }
     $("status").textContent = rows.length + " stations, du moins cher au plus cher" + (pos.fallback ? " (autour de Montpellier centre)" : "");
     $("list").innerHTML = rows.map((s, i) => {
       const g = s.geom || {};
-      const lat = g.lat, lon = g.lon;
-      const d = lat != null ? km(pos.lat, pos.lon, lat, lon).toFixed(1) + " km · " : "";
-      const link = lat != null ? `https://maps.apple.com/?daddr=${lat},${lon}` : "#";
+      const d = g.lat != null ? km(pos.lat, pos.lon, g.lat, g.lon).toFixed(1) + " km · " : "";
+      const link = g.lat != null ? route(g.lat, g.lon) : "#";
       const price = Number(s[fuel + "_prix"]).toFixed(3).replace(".", ",");
       return `<a class="card ${i === 0 ? "best" : ""}" href="${link}" target="_blank" rel="noopener">
-        <div><div class="addr">${s.adresse || ""}</div>
-        <div class="sub">${s.cp || ""} ${s.ville || ""}</div>
+        <div><div class="addr">${esc(s.adresse)}</div>
+        <div class="sub">${esc(s.cp)} ${esc(s.ville)}</div>
         <div class="sub">${d}maj ${ago(s[fuel + "_maj"])}</div></div>
         <div class="price">${price} €</div></a>`;
     }).join("");
-  } catch (e) {
-    $("status").textContent = "Erreur : " + e.message;
+  } catch (e) { $("status").textContent = "Erreur : " + e.message; }
+}
+$("go-fuel").onclick = loadFuel;
+$("fuel").onchange = loadFuel;
+$("radius").onchange = loadFuel;
+
+/* ---------- Électrique ---------- */
+// Le champ « coordonneesxy » a lon/lat inversés dans ce jeu de données :
+// on utilise consolidated_latitude / consolidated_longitude.
+function parsePrice(row) {
+  if (row.gratuit === "TRUE") return 0;
+  const t = String(row.tarification || "").toLowerCase().replace(",", ".");
+  if (!t) return null;
+  const found = [];
+  if (/kwh|kw\/h|cts|c€|cent/.test(t)) {
+    for (const m of t.matchAll(/(\d+(?:\.\d+)?)\s*(?:cts?|c€|cents?)\b/g)) found.push(parseFloat(m[1]) / 100);
+    for (const m of t.matchAll(/(\d+(?:\.\d+)?)\s*(?:€|eur|euros?)\s*(?:\/|par)?\s*kw/g)) found.push(parseFloat(m[1]));
+    for (const m of t.matchAll(/(\d+(?:\.\d+)?)\s*(?:€|eur)\b(?!\s*\/\s*(?:min|h\b))/g)) found.push(parseFloat(m[1]));
   }
+  const ok = found.filter(v => v >= 0.05 && v <= 1.5);
+  return ok.length ? Math.min(...ok) : null;
+}
+function plugs(row) {
+  const p = [];
+  if (row.prise_type_2 === "TRUE") p.push("T2");
+  if (row.prise_type_combo_ccs === "TRUE") p.push("CCS");
+  if (row.prise_type_chademo === "TRUE") p.push("CHAdeMO");
+  if (row.prise_type_ef === "TRUE") p.push("EF");
+  return p;
 }
 
-$("go").onclick = load;
-$("fuel").onchange = load;
-$("radius").onchange = load;
-load();
+async function loadEv() {
+  const radius = +$("ev-radius").value, minP = +$("ev-power").value, plug = $("ev-plug").value, sort = $("ev-sort").value;
+  $("status").textContent = "Localisation…";
+  $("list").innerHTML = "";
+  const pos = await getPos();
+  $("status").textContent = pos.fallback ? "Position indisponible → Montpellier centre. Recherche…" : "Recherche…";
+
+  const dLat = radius / 111, dLon = radius / (111 * Math.cos(pos.lat * Math.PI / 180));
+  const conds = [
+    `consolidated_latitude>=${(pos.lat - dLat).toFixed(5)}`, `consolidated_latitude<=${(pos.lat + dLat).toFixed(5)}`,
+    `consolidated_longitude>=${(pos.lon - dLon).toFixed(5)}`, `consolidated_longitude<=${(pos.lon + dLon).toFixed(5)}`
+  ];
+  if (minP > 0) conds.push(`puissance_nominale>=${minP}`);
+  if (plug) conds.push(`${plug}="TRUE"`);
+  const select = "nom_enseigne,nom_operateur,nom_station,adresse_station,id_station_itinerance,id_pdc_itinerance,nbre_pdc,puissance_nominale," +
+    "prise_type_2,prise_type_combo_ccs,prise_type_chademo,prise_type_ef,gratuit,tarification,horaires,condition_acces,date_maj," +
+    "consolidated_latitude,consolidated_longitude";
+  const base = { where: conds.join(" AND "), select, limit: "100", order_by: "puissance_nominale desc" };
+
+  try {
+    const first = await fetch(EV_API + "?" + new URLSearchParams({ ...base, offset: "0" }));
+    if (!first.ok) throw new Error("HTTP " + first.status);
+    const j = await first.json();
+    let rows = j.results || [];
+    const total = j.total_count || rows.length;
+    const extra = [];
+    for (let off = 100; off < Math.min(total, 400); off += 100)
+      extra.push(fetch(EV_API + "?" + new URLSearchParams({ ...base, offset: String(off) })).then(r => r.json()));
+    for (const part of await Promise.all(extra)) rows = rows.concat(part.results || []);
+
+    // Regrouper les points de charge par station
+    const seen = new Set(), stations = new Map();
+    for (const r of rows) {
+      if (r.consolidated_latitude == null || r.consolidated_longitude == null) continue;
+      if (r.id_pdc_itinerance) { if (seen.has(r.id_pdc_itinerance)) continue; seen.add(r.id_pdc_itinerance); }
+      const key = r.id_station_itinerance || r.adresse_station;
+      let s = stations.get(key);
+      if (!s) {
+        s = { name: r.nom_enseigne || r.nom_operateur || r.nom_station || "Station", op: r.nom_operateur, addr: r.adresse_station,
+              lat: r.consolidated_latitude, lon: r.consolidated_longitude, n: 0, power: 0, plugs: new Set(),
+              price: null, tarif: null, free: false, hours: r.horaires, maj: r.date_maj };
+        stations.set(key, s);
+      }
+      s.n++;
+      s.power = Math.max(s.power, r.puissance_nominale || 0);
+      plugs(r).forEach(p => s.plugs.add(p));
+      const pr = parsePrice(r);
+      if (pr === 0) s.free = true;
+      if (pr != null && (s.price == null || pr < s.price)) s.price = pr;
+      if (!s.tarif && r.tarification) s.tarif = r.tarification;
+      if (r.date_maj && (!s.maj || r.date_maj > s.maj)) s.maj = r.date_maj;
+    }
+    const list = [...stations.values()].map(s => ({ ...s, d: km(pos.lat, pos.lon, s.lat, s.lon) }))
+      .filter(s => s.d <= radius);
+    if (!list.length) { $("status").textContent = "Aucune borne trouvée avec ces critères."; return; }
+
+    const priceKey = s => s.free ? 0 : (s.price == null ? Infinity : s.price);
+    list.sort((a, b) =>
+      sort === "dist" ? a.d - b.d :
+      sort === "power" ? b.power - a.power || a.d - b.d :
+      priceKey(a) - priceKey(b) || a.d - b.d);
+
+    const capped = total > 400 ? " (résultats partiels, réduis le rayon)" : "";
+    $("status").textContent = list.length + " stations" + capped + (pos.fallback ? " · autour de Montpellier centre" : "");
+    $("list").innerHTML = list.slice(0, 30).map((s, i) => {
+      const priceTxt = s.free ? "Gratuit" : s.price != null ? s.price.toFixed(2).replace(".", ",") + " €" : "Prix ?";
+      const sub = s.free ? "" : s.price != null ? "/kWh" : "non renseigné";
+      return `<a class="card ${i === 0 && (s.free || s.price != null) ? "best" : ""}" href="${route(s.lat, s.lon)}" target="_blank" rel="noopener">
+        <div><div class="addr">${esc(s.name)}</div>
+        <div class="sub">${esc(s.addr)}</div>
+        <div class="sub">${s.d.toFixed(1)} km · ${s.n} borne${s.n > 1 ? "s" : ""} · jusqu'à ${Math.round(s.power)} kW · ${[...s.plugs].join(" / ") || "prises ?"}</div>
+        <div class="sub">${s.tarif ? esc(s.tarif) + " · " : ""}${esc(s.hours || "")} · maj ${esc(s.maj || "?")}</div></div>
+        <div class="price">${priceTxt}<small>${sub}</small></div></a>`;
+    }).join("");
+  } catch (e) { $("status").textContent = "Erreur : " + e.message; }
+}
+$("go-ev").onclick = loadEv;
+["ev-plug", "ev-power", "ev-radius", "ev-sort"].forEach(id => $(id).onchange = loadEv);
+
+setTab(tab === "ev" ? "ev" : "fuel");
 </script>
 </body>
 </html>
